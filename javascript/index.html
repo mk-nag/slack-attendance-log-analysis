@@ -9,6 +9,7 @@
   <body>
     <p>Slack Log Analyzer</p>
     <input type="file" id="filepicker" name="fileList" webkitdirectory multiple />
-    <button onclick="javascript:analyze()">start</button>
+    <button onclick="javascript:loadAllFiles()">start</button>
+    <input type="hidden" id="readyState" value=""/>
   </body>
 </html>
