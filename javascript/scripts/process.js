@@ -1,109 +1,43 @@
-// TODO
-// ファイル名の日付≠メッセージの日付　12:00～翌12:00をとっている？　→tsから判断する
-// 日付をまたぐ場合→アラートは出すが対象外
+let messageList = null;
 
-function analyze() {
-    let files = document.getElementById('filepicker').files;
-    
-    // get messages
-    let messageList = readFiles(files);
-    // format messages
-    test(files);
-}
+function loadAllFiles() {
+    messageList = [];
 
-function test(files) {
-    for (let i=0; i<files.length; i++) {
-        let file = files[i];
-        let ret = loadFile(file);
-        console.log(ret);
+    let files = $('#filepicker')[0].files;
+    for (let i = 0; i < files.length; i++) {
+        loadFile(files[i], i == files.length -1);
     }
 }
 
-function loadFile(file) {
-    const reader = new FileReader();        
-    reader.onload = function(evt) {
+function loadFile(file, isLastFile) {
+    const reader = new FileReader();
+    reader.onload = function (evt) {
         const messages = JSON.parse(evt.target.result);
-        console.log(messages);
+        for (const idx in messages) {
+            messageList.push(messages[idx]);
+        }
+        
+        if (isLastFile) {
+            $('#readyState')
+                .val(reader.readyState)
+                .change(); // hiddenのinputのchangeは自動発火しないため明示的に実行
+        }
     };
 
     reader.readAsText(file);
 }
 
+function analyze() {
+    console.log(messageList);
 
-function func(files) {
-    
-    new Promise((resolve) => {
-        let messageList = [];
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-            const messages = JSON.parse(evt.target.result);
-            messageList.push(messages);
-        };
-    
-        for (let i=0; i<files.length; i++) {
-            let file = files[i];
-            reader.readAsText(file);
-            break;
-        }
+    // format messages
+    for (const idx in messageList) {
+        let item = messageList[idx];
+        let ts = parseUnixTimeToDate(item.ts);
+        let time = getTime(item.text);
 
-        resolve(messageList);
-    }).then(
-        response => {
-            console.log(response);
-        }
-    );
-}
-
-function readFiles(files) {
-    let messageList= [];
-    let asyncProcess = function(flag) {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                if(flag) {
-                    resolve('true');
-                } else {
-                    reject('false');
-                }
-
-            }, 500);
-        });
-    }
-
-    asyncProcess(false).then(
-        response => {
-            //console.log(response);
-        },
-        error => {
-            //console.log('NG');
-        }
-    )
-
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-        const messages = JSON.parse(evt.target.result);
-       // callback(messages);
-    };
-
-    for (let i=0; i<files.length; i++) {
-        let file = files[i];
-        console.log(file.name);
-        reader.readAsText(file);
-        break;
-    }
-    //console.log(messageList);
-    return messageList;
-}
-
-function readFiles2(files) {
-    const reader = new FileReader();
-    reader.addEventListener('load', function() {
-        readJson(reader.result);
-    }, true)
-
-    for (let i=0; i<files.length; i++) {
-        let file = files[i];
-        console.log(file.name);
-        reader.readAsText(file);
+        console.log(ts.toLocaleDateString());
+        console.log(time);
         break;
     }
 }
@@ -118,20 +52,20 @@ function readJson(file) {
         let list = messages.filter((item, idx) => item.user == key);
         let timeList = [];
 
-        let obj = { 'userId':key, 'userName':userName };
+        let obj = { 'userId': key, 'userName': userName };
 
-        for (let i=0; i<list.length; i++) {
+        for (let i = 0; i < list.length; i++) {
             let item = list[i];
             let ts = parseUnixTimeToDate(item.ts);
             console.log(ts.toLocaleDateString());
             let time = getTime(item.text);
             timeList.push(time);
 
-            if(i == 0) {
+            if (i == 0) {
                 obj['startTime'] = time;
                 obj['endTime'] = time;
             } else {
-                if(compareTime(time, obj['startTime'])) {
+                if (compareTime(time, obj['startTime'])) {
                     obj['startTime'] = time;
                 } else {
                     obj['endTime'] = time;
@@ -139,7 +73,7 @@ function readJson(file) {
             }
         }
 
-        if(list.length != 2) {
+        if (list.length != 2) {
             obj['warn'] = 'input error';
         }
         console.log(obj);
@@ -148,7 +82,7 @@ function readJson(file) {
 
 function getUserList(messages) {
     let userList = {};
-    for (let i=0; i<messages.length; i++) {
+    for (let i = 0; i < messages.length; i++) {
         let item = messages[i];
         userList[item.user] = item.user_profile;
     }
@@ -165,15 +99,15 @@ function getTime(text) {
     if (time != null) {
         result = time[0];
     }
-    console.log(result);
+
     return result;
-} 
+}
 
 function toHalfWidth(input) {
     return input.replace(/[！-～]/g,
-      (input) => String.fromCharCode(input.charCodeAt(0) - 0xFEE0)
+        (input) => String.fromCharCode(input.charCodeAt(0) - 0xFEE0)
     );
-  };
+};
 
 function compareTime(time1, time2) {
     const dummyDate = new Date().toLocaleDateString();
@@ -186,3 +120,11 @@ function compareTime(time1, time2) {
 function parseUnixTimeToDate(unixTime) {
     return new Date(unixTime * 1000);
 }
+
+$(function(){
+    $('#readyState').change(function() {
+        if(this.value == FileReader.DONE) {
+            analyze();
+        }
+    });
+});
