@@ -1,45 +1,90 @@
 let messageList = null;
+let calendar = null;
+
+$(function () {
+    $('#start').click(function () {
+        analyze();
+    });
+
+    $('#filepicker').change(function () {
+        loadAllFiles();
+    });
+
+    $('#month').change(function () {
+        setCalendar();
+    });
+
+    const today = new Date();
+    $('#month').val(`${today.getFullYear()}-${today.getMonth() + 1}`).change();
+});
 
 function loadAllFiles() {
     messageList = [];
 
     let files = $('#filepicker')[0].files;
     for (let i = 0; i < files.length; i++) {
-        loadFile(files[i], i == files.length -1);
+        readFile(files[i], i == files.length - 1);
     }
 }
 
-function loadFile(file, isLastFile) {
-    const reader = new FileReader();
-    reader.onload = function (evt) {
-        const messages = JSON.parse(evt.target.result);
-        for (const idx in messages) {
-            messageList.push(messages[idx]);
-        }
-        
-        if (isLastFile) {
-            $('#readyState')
-                .val(reader.readyState)
-                .change(); // hiddenのinputのchangeは自動発火しないため明示的に実行
-        }
-    };
+function setCalendar() {
+    calendar = [];
 
-    reader.readAsText(file);
+    let month = $('#month').val();
+    let dt = new Date(month);
+    let lastDay = new Date(dt.getFullYear(), dt.getMonth() + 1, 0);
+
+    for (let i = 0; i < lastDay.getDate(); i++) {
+        calendar.push(dt.toLocaleDateString());
+        dt.setDate(dt.getDate() + 1);
+    }
+}
+
+function readFile(file, isLastFile) {
+    new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function (evt) {
+            const messages = JSON.parse(evt.target.result);
+            for (const idx in messages) {
+                messageList.push(messages[idx]);
+            }
+
+            resolve(reader.readyState);
+        };
+
+        reader.readAsText(file);
+    }).then((response) => {
+        if (isLastFile) {
+            setUserList();
+        }
+    });
+}
+
+function setUserList() {
+    for (const item of messageList) {
+        if ($('#userList option[value="' + item.user + '"]').length == 0) {
+            $('#userList')
+                .append($("<option>")
+                .val(item.user)
+                .text(item.user_profile.real_name));
+        }
+    }
 }
 
 function analyze() {
-    console.log(messageList);
+    let userId = $('#userList').val();
+    let userMessages = messageList.filter((item, idx) => item.user == userId);
+    console.log(userId);
+   
 
     // format messages
-    for (const idx in messageList) {
-        let item = messageList[idx];
-        let ts = parseUnixTimeToDate(item.ts);
-        let time = getTime(item.text);
-
-        console.log(ts.toLocaleDateString());
-        console.log(time);
-        break;
+    for (const item of userMessages) {
+        let day = parseUnixTimeToDate(item.ts);
+        item.day = day.toLocaleDateString();
+        item.time = getTime(item.text);
     }
+
+    console.log(userMessages);
 }
 
 function readJson(file) {
@@ -120,11 +165,3 @@ function compareTime(time1, time2) {
 function parseUnixTimeToDate(unixTime) {
     return new Date(unixTime * 1000);
 }
-
-$(function(){
-    $('#readyState').change(function() {
-        if(this.value == FileReader.DONE) {
-            analyze();
-        }
-    });
-});
