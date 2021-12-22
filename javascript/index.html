@@ -5,13 +5,32 @@
     <title>Slack Log Analyzer</title>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="scripts/process.js"></script>
+    <link href="styles/style.css" rel="stylesheet">
   </head>
   <body>
-    <p>Slack Log Analyzer</p>
-    <p><input type="month" id="month" /></p>
-    <p><input type="file" id="filepicker" name="fileList" webkitdirectory multiple /></p>
-    <p>name : <select id="userList"></select></p>
-    <button id="start">start</button>
-    <input type="hidden" id="readyState" value=""/>
+    <p>勤怠ログ解析</p>
+    <p>年月日：<input type="month" id="month" /></p>
+    <p>ログフォルダ：<input type="file" id="filepicker" name="fileList" webkitdirectory multiple /></p>
+    <p>ユーザ名：<select id="userList"></select></p>
+    <div><button id="start">開始</button></div>
+
+    <p>結果</p>
+    <div class="flex">
+      <table id="days" class="result days">
+        <tr>
+          <th>日付</th>
+        </tr>
+      </table>
+      <table id="startTime" class="result times">
+        <tr>
+          <th>開始時間</th>
+        </tr>
+      </table>
+      <table id="endTime" class="result times">
+        <tr>
+          <th>終了時間</th>
+        </tr>
+      </table>
+    </div>
   </body>
 </html>

@@ -1,42 +1,49 @@
+const separator = '\t';
 let messageList = null;
 let calendar = null;
 
 $(function () {
-    $('#start').click(function () {
+    $('#start').click(() => {
+        if(messageList == null || messageList.length == 0) {
+            alert('select log folder');
+            return;
+        }
+
+        deleteResult();
         analyze();
     });
 
-    $('#filepicker').change(function () {
-        loadAllFiles();
+    $('#filepicker').change((e) => {
+        loadAllFiles(e);
     });
 
-    $('#month').change(function () {
-        setCalendar();
+    $('#month').change((e) => {
+        setCalendar(e);
     });
 
     const today = new Date();
     $('#month').val(`${today.getFullYear()}-${today.getMonth() + 1}`).change();
 });
 
-function loadAllFiles() {
-    messageList = [];
-
-    let files = $('#filepicker')[0].files;
-    for (let i = 0; i < files.length; i++) {
-        readFile(files[i], i == files.length - 1);
-    }
-}
-
-function setCalendar() {
+function setCalendar(e) {
     calendar = [];
 
-    let month = $('#month').val();
+    let month = e.target.value;
     let dt = new Date(month);
     let lastDay = new Date(dt.getFullYear(), dt.getMonth() + 1, 0);
 
     for (let i = 0; i < lastDay.getDate(); i++) {
         calendar.push(dt.toLocaleDateString());
         dt.setDate(dt.getDate() + 1);
+    }
+}
+
+function loadAllFiles(e) {
+    messageList = [];
+
+    let files = e.target.files;
+    for (let i = 0; i < files.length; i++) {
+        readFile(files[i], i == files.length - 1);
     }
 }
 
@@ -49,11 +56,11 @@ function readFile(file, isLastFile) {
                 messageList.push(messages[idx]);
             }
 
-            resolve(reader.readyState);
+            resolve();
         };
 
         reader.readAsText(file);
-    }).then((response) => {
+    }).then(() => {
         if (isLastFile) {
             setUserList();
         }
@@ -62,77 +69,66 @@ function readFile(file, isLastFile) {
 
 function setUserList() {
     for (const item of messageList) {
-        if ($('#userList option[value="' + item.user + '"]').length == 0) {
+        if ($(`#userList option[value='${item.user}']`).length == 0) {
             $('#userList')
                 .append($("<option>")
-                .val(item.user)
-                .text(item.user_profile.real_name));
+                    .val(item.user)
+                    .text(item.user_profile.real_name));
         }
     }
+}
+
+function deleteResult() {
+    $('.flex table tr:has(td)').remove();
 }
 
 function analyze() {
     let userId = $('#userList').val();
     let userMessages = messageList.filter((item, idx) => item.user == userId);
-    console.log(userId);
-   
 
-    // format messages
+    // set date
     for (const item of userMessages) {
         let day = parseUnixTimeToDate(item.ts);
         item.day = day.toLocaleDateString();
         item.time = getTime(item.text);
     }
 
-    console.log(userMessages);
-}
+    let dataList = [];
+    for (const day of calendar) {
+        let obj = { 'day': day, 'startTime': '', 'endTime': '' };
 
-function readJson(file) {
-    const messages = JSON.parse(file);
-    const userList = getUserList(messages);
-
-    for (const key in userList) {
-        let userName = userList[key].real_name;
-
-        let list = messages.filter((item, idx) => item.user == key);
-        let timeList = [];
-
-        let obj = { 'userId': key, 'userName': userName };
+        let list = userMessages.filter((item, idx) => item.day == day && item.time != '');
+        if (list.length == 1) {
+            obj['warn'] = '`${day}` : NO POST of start or end time';
+        }
 
         for (let i = 0; i < list.length; i++) {
             let item = list[i];
-            let ts = parseUnixTimeToDate(item.ts);
-            console.log(ts.toLocaleDateString());
-            let time = getTime(item.text);
-            timeList.push(time);
 
             if (i == 0) {
-                obj['startTime'] = time;
-                obj['endTime'] = time;
+                obj.startTime = item.time;
+                obj.endTime = item.time;
             } else {
-                if (compareTime(time, obj['startTime'])) {
-                    obj['startTime'] = time;
+                if (compareTime(item.time, obj.startTime)) {
+                    obj.startTime = item.time;
                 } else {
-                    obj['endTime'] = time;
+                    obj.endTime = item.time;
                 }
             }
         }
 
-        if (list.length != 2) {
-            obj['warn'] = 'input error';
-        }
-        console.log(obj);
+        dataList.push(obj);
     }
+
+    displayData(dataList);
 }
 
-function getUserList(messages) {
-    let userList = {};
-    for (let i = 0; i < messages.length; i++) {
-        let item = messages[i];
-        userList[item.user] = item.user_profile;
+function displayData(dataList) {
+    for (const item of dataList) {
+        $('#days').append(`<tr><td>${item.day}</td></tr>`);
+        $('#startTime').append(`<tr><td>${item.startTime}</td></tr>`);
+        $('#endTime').append(`<tr><td>${item.endTime}</td></tr>`);
     }
-
-    return userList;
 }
 
 function getTime(text) {
