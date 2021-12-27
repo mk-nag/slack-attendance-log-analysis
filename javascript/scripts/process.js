@@ -124,10 +124,21 @@ function analyze() {
 }
 
 function displayData(dataList) {
+    const blankRow = `<tr><td><br></td></tr>`;
     for (const item of dataList) {
         $('#days').append(`<tr><td>${item.day}</td></tr>`);
-        $('#startTime').append(`<tr><td>${item.startTime}</td></tr>`);
-        $('#endTime').append(`<tr><td>${item.endTime}</td></tr>`);
+
+        if(item.startTime == '') {
+            $('#startTime').append(blankRow);
+        } else {
+            $('#startTime').append(`<tr><td>${item.startTime}</td></tr>`);
+        }
+
+        if(item.startTime == '') {
+            $('#endTime').append(blankRow);
+        } else {
+            $('#endTime').append(`<tr><td>${item.endTime}</td></tr>`);
+        }
     }
 }
 
